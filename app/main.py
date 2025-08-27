@@ -3,19 +3,20 @@ import pickle
 import pandas as pd
 import plotly.graph_objects as go
 import numpy as np
+import time
 
+
+# ------------------ DATA LOADING ------------------
 def get_clean_data():
-        data = pd.read_csv("data/data.csv")
+    data = pd.read_csv("data/data.csv")
+    data = data.drop(['Unnamed: 32', 'id'], axis=1)
+    data['diagnosis'] = data['diagnosis'].map({'M': 1, 'B': 0})
+    return data
 
-        data = data.drop(['Unnamed: 32','id'], axis=1)
 
-        data['diagnosis'] = data['diagnosis'].map({'M': 1, 'B': 0})
-
-        return data
-
+# ------------------ SIDEBAR ------------------
 def add_sidebar():
-    st.sidebar.header("Cell Nuclei Measurements")
-
+    st.sidebar.header("⚙️ Cell Nuclei Measurements")
     data = get_clean_data()
 
     slider_labels = [
@@ -51,129 +52,161 @@ def add_sidebar():
         ("Fractal dimension (worst)", "fractal_dimension_worst"),
     ]
 
-    input_dict={}
-
+    input_dict = {}
     for label, key in slider_labels:
-         input_dict[key] = st.sidebar.slider(
+        input_dict[key] = st.sidebar.slider(
             label,
             min_value=float(0),
             max_value=float(data[key].max()),
             value=float(data[key].mean())
-         )
+        )
     return input_dict
 
+
+# ------------------ SCALE VALUES ------------------
 def get_scaled_values(input_dict):
     data = get_clean_data()
+    X = data.drop(['diagnosis'], axis=1)
 
-    X = data.drop (['diagnosis'], axis = 1)
     scaled_dict = {}
     for key, value in input_dict.items():
         max_val = X[key].max()
         min_val = X[key].min()
-        scaled_value = (value - min_val)/(max_val - min_val)
+        scaled_value = (value - min_val) / (max_val - min_val)
         scaled_dict[key] = scaled_value
-        
     return scaled_dict
-    
+
+
+# ------------------ RADAR CHART ------------------
+# ------------------ RADAR CHART ------------------
 def get_radar_chart(input_data):
-  
-  input_data = get_scaled_values(input_data)
-  
-  categories = ['Radius', 'Texture', 'Perimeter', 'Area', 
-                'Smoothness', 'Compactness', 
-                'Concavity', 'Concave Points',
-                'Symmetry', 'Fractal Dimension']
+    input_data = get_scaled_values(input_data)
 
-  fig = go.Figure()
+    categories = [
+        'Radius', 'Texture', 'Perimeter', 'Area',
+        'Smoothness', 'Compactness',
+        'Concavity', 'Concave Points',
+        'Symmetry', 'Fractal Dimension'
+    ]
 
-  fig.add_trace(go.Scatterpolar(
-        r=[
-          input_data['radius_mean'], input_data['texture_mean'], input_data['perimeter_mean'],
+    fig = go.Figure()
+    neon_colors = ["#00ffff", "#ff00ff", "#00ff88"]
+
+    traces = [
+        ([input_data['radius_mean'], input_data['texture_mean'], input_data['perimeter_mean'],
           input_data['area_mean'], input_data['smoothness_mean'], input_data['compactness_mean'],
           input_data['concavity_mean'], input_data['concave points_mean'], input_data['symmetry_mean'],
-          input_data['fractal_dimension_mean']
-        ],
-        theta=categories,
-        fill='toself',
-        name='Mean Value'
-  ))
-  fig.add_trace(go.Scatterpolar(
-        r=[
-          input_data['radius_se'], input_data['texture_se'], input_data['perimeter_se'], input_data['area_se'],
+          input_data['fractal_dimension_mean']], "Mean Value", neon_colors[0]),
+
+        ([input_data['radius_se'], input_data['texture_se'], input_data['perimeter_se'], input_data['area_se'],
           input_data['smoothness_se'], input_data['compactness_se'], input_data['concavity_se'],
-          input_data['concave points_se'], input_data['symmetry_se'],input_data['fractal_dimension_se']
-        ],
-        theta=categories,
-        fill='toself',
-        name='Standard Error'
-  ))
-  fig.add_trace(go.Scatterpolar(
-        r=[
-          input_data['radius_worst'], input_data['texture_worst'], input_data['perimeter_worst'],
+          input_data['concave points_se'], input_data['symmetry_se'], input_data['fractal_dimension_se']], "Standard Error", neon_colors[1]),
+
+        ([input_data['radius_worst'], input_data['texture_worst'], input_data['perimeter_worst'],
           input_data['area_worst'], input_data['smoothness_worst'], input_data['compactness_worst'],
           input_data['concavity_worst'], input_data['concave points_worst'], input_data['symmetry_worst'],
-          input_data['fractal_dimension_worst']
-        ],
-        theta=categories,
-        fill='toself',
-        name='Worst Value'
-  ))
+          input_data['fractal_dimension_worst']], "Worst Value", neon_colors[2])
+    ]
 
-  fig.update_layout(
-    polar=dict(
-      radialaxis=dict(
-        visible=True,
-        range=[0, 1]
-      )),
-    showlegend=True
-  )
-  
-  return fig
+    for r, name, color in traces:
+        fig.add_trace(go.Scatterpolar(
+            r=r,
+            theta=categories,
+            fill='toself',
+            name=name,
+            line=dict(color=color, width=2),
+            fillcolor=color.replace("#", "rgba(").replace("ff", "") if False else color,  # overwrite below
+            opacity=0.4  # ✅ clean transparency
+        ))
 
+    # ✅ Clean dark radar style
+    fig.update_layout(
+        polar=dict(
+            bgcolor="black",
+            radialaxis=dict(
+                visible=True,
+                range=[0, 1],
+                gridcolor="gray",
+                linecolor="gray",
+                gridwidth=0.6,
+                showline=True
+            ),
+            angularaxis=dict(
+                gridcolor="gray",
+                linecolor="gray"
+            )
+        ),
+        showlegend=True,
+        paper_bgcolor="black",
+        font=dict(color="white", size=12),
+        margin=dict(l=40, r=40, t=40, b=40)
+    )
+
+    return fig
+
+
+# ------------------ PREDICTION ------------------
 def add_predictions(input_data):
     model = pickle.load(open("model/model.pkl", "rb"))
     scaler = pickle.load(open("model/scaler.pkl", "rb"))
 
     input_array = np.array(list(input_data.values())).reshape(1, -1)
-
     input_array_scaled = scaler.transform(input_array)
-
     prediction = model.predict(input_array_scaled)
 
-    st.subheader("Cell cluster prediction")
+    st.subheader("🔬 Cell Cluster Prediction")
     st.write("The cell cluster is:")
 
-    if prediction[0]== 0:
-        st.write("<span class='diagnosis benign'>Benign</span>", unsafe_allow_html=True)
+    if prediction[0] == 0:
+        st.success("🟢 Benign")
     else:
-        st.write("<span class='diagnosis malicious'>Malicious",  unsafe_allow_html=True )  
+        st.error("🔴 Malignant")
 
-    st.write("Probability of being benign: ",model.predict_proba(input_array_scaled) [0][0]) 
-    st.write("Probability of being malicious: ",model.predict_proba(input_array_scaled) [0][1]) 
-    st.write("This app can assist medical professionals in making a diagnosis, but should not be used as a substitute for a professional diagnosis.")
+    st.write("Probability of being benign:", model.predict_proba(input_array_scaled)[0][0])
+    st.write("Probability of being malignant:", model.predict_proba(input_array_scaled)[0][1])
+    st.caption("⚠️ This app can assist medical professionals but should not replace professional diagnosis.")
 
+
+# ------------------ MAIN ------------------
 def main():
-    st.set_page_config(
-        page_title="Breast Cancer Predictor",
-        page_icon="female-doctor",
-        layout="wide",
-        initial_sidebar_state="expanded"
+    # 🚫 REMOVED st.set_page_config() → only in landing.py
+
+    # ✅ Load CSS
+    try:
+        with open("assets/style.css", "r", encoding="utf-8") as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    except:
+        pass
+
+    # Title animation
+    st.markdown(
+        """
+        <div style="text-align:center; margin-bottom:20px;">
+            <span class="stethoscope">🩺</span>
+            <h1 class="title">Breast Cancer Predictor</h1>
+            <div class="scan-line"></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
-    with open("assets/style.css") as f:
-        st.markdown("<style>{}</style>".format(f.read()), unsafe_allow_html=True)
+
+    st.write("Please connect this app to your cytology lab to help diagnose breast cancer form your tissue sample. This app predicts using a machine learning model whether a breast mass is benign or malignant based on the measurements it receives from your cytosis lab. You can also update the measurements by hand using the sliders in the sidebar. ")
 
     input_data = add_sidebar()
 
-    with st.container():
-        st.title("Breast Cancer Predictor")
-        st.write("Please connect this app to your cytology lab to help diagnose breast cancer form your tissue sample. This app predicts using a machine learning model whether a breast mass is benign or malignant based on the measurements it receives from your cytosis lab. You can also update the measurements by hand using the sliders in the sidebar.")
-    col1, col2 = st.columns([4,1])
+    # Cinematic loading effect
+    with st.spinner("🩻 Scanning tissue sample..."):
+        time.sleep(2.5)
+
+    col1, col2 = st.columns([4, 1])
 
     with col1:
         radar_chart = get_radar_chart(input_data)
-        st.plotly_chart(radar_chart)
+        st.plotly_chart(radar_chart, use_container_width=True)
+
     with col2:
         add_predictions(input_data)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
