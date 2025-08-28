@@ -1,16 +1,99 @@
-.st-emotion-cache-ig7yu6 {
-  padding: 1rem;
-  border-radius: 0.5rem;
-  background-color: #d3ecfe;
+/* --- Base Card Styling --- */
+.css-j5r0tf {
+    padding: 1rem;
+    border-radius: 1rem;
+    background: linear-gradient(145deg, #6E879B, #7E99AB);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
+.css-j5r0tf:hover {
+    transform: scale(1.02);
+    box-shadow: 0 6px 30px rgba(0,0,0,0.5);
+}
+
+/* --- Diagnosis Styles with Cinematic Glow --- */
 .diagnosis {
-    color: white;
-    padding: 0.2em 0.5rem;
-    border-radius: 0.5em;
+    color: #fff;
+    padding: 0.5em 1em;
+    border-radius: 0.6em;
+    font-size: 1.3rem;
+    font-weight: bold;
+    text-align: center;
+    display: inline-block;
+    margin-top: 0.6em;
+    letter-spacing: 0.5px;
+    transition: all 0.4s ease-in-out;
 }
-.diagnosis.benign{
-    background-color: rgb(46, 246, 7);
+
+/* ✅ Benign (Green Neon Pulse) */
+.diagnosis.benign {
+    background-color: #01DB4B;
+    box-shadow: 0 0 15px #01DB4B, 0 0 30px #00ff88;
+    animation: pulseGreen 2s infinite alternate;
 }
-.diagnosis.malicious{
-    background-color: red;
+
+/* ❌ Malignant (Red Neon Pulse) */
+.diagnosis.malicious {
+    background-color: #ff3b3b;
+    box-shadow: 0 0 15px #ff3b3b, 0 0 30px #ff6666;
+    animation: pulseRed 2s infinite alternate;
+}
+
+/* --- Pulse Animations --- */
+@keyframes pulseGreen {
+    0% { box-shadow: 0 0 10px #01DB4B, 0 0 20px #00ff88; }
+    50% { box-shadow: 0 0 25px #00ffaa, 0 0 50px #00ffcc; }
+    100% { box-shadow: 0 0 15px #01DB4B, 0 0 30px #00ff88; }
+}
+@keyframes pulseRed {
+    0% { box-shadow: 0 0 10px #ff3b3b, 0 0 20px #ff6666; }
+    50% { box-shadow: 0 0 25px #ff2244, 0 0 50px #ff6688; }
+    100% { box-shadow: 0 0 15px #ff3b3b, 0 0 30px #ff6666; }
+}
+
+/* --- Cinematic Title Animation --- */
+.title {
+    font-size: 2.7rem;
+    font-weight: 900;
+    text-align: center;
+    color: #00e6e6;
+    text-shadow: 0 0 12px #00f0f0, 0 0 25px #00ffff, 0 0 40px rgba(0,255,255,0.6);
+    animation: fadeIn 2s ease-in-out forwards;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* --- Stethoscope Slide-in --- */
+.stethoscope {
+    font-size: 3.2rem;
+    display: inline-block;
+    animation: slideIn 1.2s ease-out;
+    color: #00ffff;
+    text-shadow: 0 0 12px #00f0f0, 0 0 20px #00cccc;
+}
+@keyframes slideIn {
+    from { transform: translateX(-150%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* --- Radar Chart Neon Glow --- */
+.radar-glow .plotly {
+    filter: drop-shadow(0 0 15px #00ffff) drop-shadow(0 0 25px #00e6e6);
+}
+
+/* --- Rotating Scan Line --- */
+.scan-line {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 2px solid rgba(0,255,255,0.35);
+    animation: rotateScan 5s linear infinite;
+    box-shadow: 0 0 20px rgba(0,255,255,0.3);
+}
+@keyframes rotateScan {
+    0% { transform: rotate(0deg); opacity: 0.7; }
+    100% { transform: rotate(360deg); opacity: 0.2; }
 }
